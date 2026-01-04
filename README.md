@@ -2,3 +2,4 @@
 מערכת ניהול
 index.html
 manifest.json
+sw.js
