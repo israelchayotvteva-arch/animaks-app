@@ -1,2 +1,2 @@
-# animaks-app
+# animals-app
 מערכת ניהול
