@@ -1,212 +1,161 @@
 const e = React.createElement;
 const { useState, useEffect } = React;
 
-// נתוני מערכת מתוך הגיבוי והסרטון
-const initialData = {
-  instructors: [
-    { id: 1, name: "יצי קהאן", password: "1234" },
-    { id: 2, name: "יונתן כהן", password: "1234" },
-    { id: 3, name: "שלמה אליאך", password: "1234" },
-    { id: 4, name: "ישראל סופר", password: "1234" }
-  ],
-  institutions: [
-    { id: 1, name: "פולה בן גוריון", instructorRate: 90 },
-    { id: 2, name: "בית ספר אדי", instructorRate: 70 },
-    { id: 3, name: "צהרונים בית שמש", instructorRate: 60 },
-    { id: 4, name: "חברת אריאל", instructorRate: 70 },
-    { id: 5, name: "מועדוניות עלי שיח", instructorRate: 70 }
-  ],
-  events: [
-    { id: 'e1', name: "פינת חי", pay: 500 },
-    { id: 'e2', name: "סדנה", pay: 400 },
-    { id: 'e3', name: "מופע", pay: 600 }
-  ],
-  animals: ["🐰 ארנבון", "🦎 לטאה", "🐍 נחש", "🐹 אוגר", "🐢 צב", "🦜 תוכי", "🦔 קיפוד", "🐭 עכבר", "🦗 חרקים", "🐓 תרנגולת"]
-};
+// נתוני יסוד (Initial Data) מתוך הגיבוי
+const INITIAL_INSTITUTIONS = [
+  { id: 1, name: "בית ספר פולה בן גוריון", location: "ירושלים", clientRate: 170, instructorRate: 90 },
+  { id: 2, name: "בית ספר אדי", location: "ירושלים", clientRate: 165, instructorRate: 70 },
+  { id: 3, name: "צהרונים בית שמש", location: "בית שמש", clientRate: 180, instructorRate: 60 },
+  { id: 4, name: "חברת אריאל", location: "ירושלים", clientRate: 165, instructorRate: 70 },
+  { id: 5, name: "מועדוניות עלי שיח", location: "ירושלים", clientRate: 165, instructorRate: 70 }
+];
+
+const ANIMALS = ["🐰 ארנבון", "🦎 לטאה", "🐍 נחש", "🐹 אוגר", "🐢 צב", "🦜 תוכי", "🦔 קיפוד", "🐭 עכבר", "🦗 חרקים", "🐓 תרנגולת"];
+const EXPENSE_CATEGORIES = ["⛽ דלק", "🅿️ חניה", "📦 ציוד", "🥕 מזון לחיות", "📝 אחר"];
 
 function App() {
   const [user, setUser] = useState(null);
-  const [activeTab, setActiveTab] = useState('home'); // home, report, library, tasks
+  const [view, setView] = useState('login');
   const [reports, setReports] = useState([]);
-  
-  // טופס דיווח מעודכן (לפי האפיון הסופי)
-  const [reportForm, setReportForm] = useState({
-    date: new Date().toISOString().split('T')[0],
-    targetId: '',
-    numGroups: 1,
-    animalUsed: '',
-    cashReceived: '',
-    bonus: '',
-    notes: ''
-  });
+  const [institutions, setInstitutions] = useState(INITIAL_INSTITUTIONS);
+  const [expenses, setExpenses] = useState([]);
+  const [tasks, setTasks] = useState([
+    { id: 1, title: 'החתם את הגננת על דף נוכחות', assignedTo: 'ישראל סופר', status: 'pending', priority: 'high' }
+  ]);
 
-  // פונקציית הגשת דיווח עם לוגיקה פיננסית
-  const handleReportSubmit = () => {
-    if (!reportForm.targetId || !reportForm.animalUsed) return alert("נא למלא את כל השדות");
-    
-    const isEvent = reportForm.targetId.startsWith('e');
-    const source = isEvent ? initialData.events : initialData.institutions;
-    const selected = source.find(s => s.id == reportForm.targetId);
-    
-    const baseRate = isEvent ? selected.pay : selected.instructorRate;
-    const totalActivity = baseRate * reportForm.numGroups;
-    
-    const newReport = {
-      ...reportForm,
-      id: Date.now(),
-      instructorId: user.id,
-      activityName: selected.name,
-      basePay: totalActivity,
-      finalPay: (totalActivity + Number(reportForm.bonus || 0)) - Number(reportForm.cashReceived || 0)
-    };
+  // טעינה מ-LocalStorage
+  useEffect(() => {
+    const data = ['reports', 'institutions', 'expenses', 'tasks'];
+    data.forEach(key => {
+      const saved = localStorage.getItem(`israel_${key}`);
+      if (saved) {
+        if (key === 'reports') setReports(JSON.parse(saved));
+        if (key === 'institutions') setInstitutions(JSON.parse(saved));
+        if (key === 'expenses') setExpenses(JSON.parse(saved));
+        if (key === 'tasks') setTasks(JSON.parse(saved));
+      }
+    });
+  }, []);
 
-    setReports([newReport, ...reports]);
-    alert("הדיווח נשלח בהצלחה!");
-    setActiveTab('home');
-    setReportForm({ ...reportForm, targetId: '', numGroups: 1, animalUsed: '', cashReceived: '', bonus: '', notes: '' });
+  // שמירה ל-LocalStorage בכל שינוי
+  useEffect(() => {
+    localStorage.setItem('israel_reports', JSON.stringify(reports));
+    localStorage.setItem('israel_institutions', JSON.stringify(institutions));
+    localStorage.setItem('israel_expenses', JSON.stringify(expenses));
+    localStorage.setItem('israel_tasks', JSON.stringify(tasks));
+  }, [reports, institutions, expenses, tasks]);
+
+  const handleLogin = (u, p) => {
+    if (p === '1234') {
+      if (u === 'admin') setUser({ role: 'admin', name: 'מנהל' });
+      else if (u === 'secretary') setUser({ role: 'secretary', name: 'מזכירה' });
+      else setUser({ role: 'instructor', name: u });
+      setView('home');
+    } else alert('סיסמה שגויה');
   };
 
-  if (!user) {
-    return e('div', { className: 'min-h-screen flex items-center justify-center bg-[#f0fdf4] p-6' },
-      e('div', { className: 'bg-white p-8 rounded-3xl shadow-2xl w-full max-w-sm text-center' },
-        e('div', { className: 'text-5xl mb-4' }, '🐨'),
-        e('h1', { className: 'text-2xl font-bold text-[#15803d] mb-2' }, 'ישראל חיות וטבע'),
-        e('p', { className: 'text-gray-500 mb-8' }, 'מערכת ניהול חכמה'),
-        e('input', { id: 'u', placeholder: 'שם מלא', className: 'w-full p-4 border rounded-2xl mb-4 text-right bg-gray-50' }),
-        e('input', { id: 'p', type: 'password', placeholder: 'סיסמה', className: 'w-full p-4 border rounded-2xl mb-6 text-right bg-gray-50' }),
+  // פונקציות עזר לחישובים
+  const calculateInstructorSalary = (name) => {
+    const userReports = reports.filter(r => r.instructorName === name);
+    const base = userReports.reduce((sum, r) => sum + Number(r.pay), 0);
+    const bonuses = userReports.reduce((sum, r) => sum + Number(r.bonus || 0), 0);
+    const cash = userReports.reduce((sum, r) => sum + Number(r.cash || 0), 0);
+    const approvedExp = expenses.filter(e => e.instructorName === name && e.status === 'approved')
+                                .reduce((sum, e) => sum + Number(e.amount), 0);
+    return (base + bonuses + approvedExp) - cash;
+  };
+
+  // --- רכיבי UI ---
+
+  const Layout = ({ children }) => e('div', { className: 'min-h-screen bg-green-50 flex flex-col', dir: 'rtl' },
+    e('header', { className: 'bg-green-800 text-white p-4 shadow-lg text-center' },
+      e('div', { className: 'text-4xl mb-1' }, '🐨'),
+      e('h1', { className: 'text-xl font-bold' }, 'ישראל חיות וטבע'),
+      user && e('div', { className: 'text-sm mt-2 flex justify-between items-center bg-green-900 p-2 rounded' },
+        e('span', null, `שלום, ${user.name}`),
+        e('button', { onClick: () => {setUser(null); setView('login');}, className: 'underline text-xs' }, 'התנתק')
+      )
+    ),
+    e('main', { className: 'flex-grow p-4 max-w-md mx-auto w-full' }, children),
+    e('footer', { className: 'p-4 text-center text-gray-400 text-xs' }, '© כל הזכויות שמורות לישראל חיות וטבע')
+  );
+
+  if (view === 'login') {
+    return Layout({
+      children: e('div', { className: 'bg-white p-6 rounded-2xl shadow-xl mt-10' },
+        e('h2', { className: 'text-center font-bold mb-6' }, 'כניסת משתמש'),
+        e('input', { id: 'u', placeholder: 'שם מלא (למשל: יצי קהאן)', className: 'w-full p-3 border rounded mb-4 text-right' }),
+        e('input', { id: 'p', type: 'password', placeholder: 'סיסמה', className: 'w-full p-3 border rounded mb-6 text-right' }),
         e('button', { 
-          onClick: () => {
-            const u = document.getElementById('u').value;
-            const p = document.getElementById('p').value;
-            const found = initialData.instructors.find(i => i.name === u && i.password === p);
-            if (found) setUser({ ...found, role: 'instructor' });
-            else if (u === 'admin') setUser({ role: 'admin', name: 'מנהל' });
-            else alert("פרטים לא נכונים");
-          },
-          className: 'w-full bg-[#15803d] text-white p-4 rounded-2xl font-bold text-lg hover:bg-[#166534] transition-all' 
+          onClick: () => handleLogin(document.getElementById('u').value, document.getElementById('p').value),
+          className: 'w-full bg-green-700 text-white p-3 rounded-xl font-bold' 
         }, 'כניסה למערכת')
       )
-    );
+    });
   }
 
-  // תצוגת בית (שכר וסיכומים)
-  const HomeView = () => {
-    const instructorReports = reports.filter(r => r.instructorId === user.id);
-    const totalFinal = instructorReports.reduce((sum, r) => sum + r.finalPay, 0);
+  // תפריט מדריך
+  const InstructorHome = () => e('div', { className: 'grid grid-cols-2 gap-4' },
+    [
+      { id: 'report', label: '📅 דיווח חדש', color: 'border-green-600' },
+      { id: 'salary', label: '💰 השכר שלי', color: 'border-blue-600' },
+      { id: 'tasks', label: '📋 משימות', color: 'border-yellow-600' },
+      { id: 'expenses', label: '💳 הוצאות', color: 'border-orange-600' },
+      { id: 'library', label: '📚 ספרייה', color: 'border-purple-600' }
+    ].map(item => e('button', {
+      key: item.id,
+      onClick: () => setView(item.id),
+      className: `bg-white p-6 rounded-2xl shadow-sm border-b-4 ${item.color} font-bold`
+    }, item.label))
+  );
 
-    return e('div', { className: 'p-4 pb-24' },
-      e('div', { className: 'bg-[#15803d] p-8 rounded-[2rem] text-white shadow-lg text-center mb-6' },
-        e('div', { className: 'text-sm opacity-80 mb-1' }, 'נטו לתשלום החודש'),
-        e('div', { className: 'text-5xl font-black' }, `₪${totalFinal}`),
-        e('div', { className: 'mt-4 flex justify-center gap-4 text-xs opacity-90' },
-          e('span', null, `דיווחים: ${instructorReports.length}`),
-          e('span', null, `|`),
-          e('span', null, `חודש: ינואר 2026`)
-        )
+  // מסך דיווח
+  const ReportForm = () => {
+    const [form, setForm] = useState({ instId: '', groups: 1, animal: '', bonus: 0, cash: 0 });
+    return e('div', { className: 'bg-white p-4 rounded-xl shadow' },
+      e('h2', { className: 'font-bold mb-4' }, 'דיווח פעילות'),
+      e('select', { className: 'w-full p-3 border rounded mb-4', onChange: e => setForm({...form, instId: e.target.value}) },
+        e('option', null, 'בחר מוסד'),
+        institutions.map(i => e('option', { key: i.id, value: i.id }, i.name))
       ),
-      e('h3', { className: 'font-bold text-gray-800 mb-4 px-2' }, 'דיווחים אחרונים'),
-      instructorReports.map(r => e('div', { key: r.id, className: 'bg-white p-4 rounded-2xl mb-3 shadow-sm flex justify-between items-center border-r-4 border-green-500' },
-        e('div', { className: 'text-left' }, 
-          e('div', { className: 'font-bold text-green-700' }, `₪${r.finalPay}`),
-          e('div', { className: 'text-[10px] text-gray-400' }, r.date)
-        ),
-        e('div', { className: 'text-right' },
-          e('div', { className: 'font-bold text-sm' }, r.activityName),
-          e('div', { className: 'text-xs text-gray-500' }, `${r.numGroups} קבוצות | ${r.animalUsed}`)
-        )
-      ))
+      e('label', { className: 'block mb-2' }, 'מספר קבוצות:'),
+      e('div', { className: 'grid grid-cols-5 gap-2 mb-4' },
+        [1,2,3,4,5].map(n => e('button', { 
+          onClick: () => setForm({...form, groups: n}),
+          className: `p-2 rounded border ${form.groups === n ? 'bg-green-700 text-white' : ''}`
+        }, n))
+      ),
+      e('select', { className: 'w-full p-3 border rounded mb-4', onChange: e => setForm({...form, animal: e.target.value}) },
+        e('option', null, 'בחר בעל חיים'),
+        ANIMALS.map(a => e('option', { key: a, value: a }, a))
+      ),
+      e('input', { type: 'number', placeholder: 'בונוס (נסיעות/הצטיינות)', className: 'w-full p-3 border rounded mb-4', onChange: e => setForm({...form, bonus: e.target.value}) }),
+      e('input', { type: 'number', placeholder: 'מזומן שנתקבל בשטח', className: 'w-full p-3 border rounded mb-6', onChange: e => setForm({...form, cash: e.target.value}) }),
+      e('button', { 
+        className: 'w-full bg-green-700 text-white p-4 rounded-xl font-bold',
+        onClick: () => {
+          const inst = institutions.find(i => i.id == form.instId);
+          setReports([...reports, { ...form, instructorName: user.name, date: new Date().toLocaleDateString(), pay: inst.instructorRate * form.groups, instName: inst.name, id: Date.now() }]);
+          alert('הדיווח נשלח!'); setView('home');
+        }
+      }, 'שלח דיווח')
     );
   };
 
-  // תצוגת ספרייה (התיקיות הצבעוניות מהסרטון)
-  const LibraryView = () => e('div', { className: 'p-4 pb-24 grid gap-4' },
-    [
-      { n: 'מערכי שיעור', c: 'bg-blue-50 text-blue-600', i: '📚' },
-      { n: 'מידע על חיות', c: 'bg-green-50 text-green-600', i: '🦎' },
-      { n: 'סרטוני הדרכה', c: 'bg-red-50 text-red-600', i: '🎥' },
-      { n: 'אישורים ורישיונות', c: 'bg-purple-50 text-purple-600', i: '📜' },
-      { n: 'מסמכי עבודה', c: 'bg-orange-50 text-orange-600', i: '📂' }
-    ].map(f => e('div', { key: f.n, className: `${f.c} p-6 rounded-2xl flex justify-between items-center cursor-pointer active:scale-95 transition-transform shadow-sm` },
-      e('span', { className: 'text-2xl' }, '📂'),
-      e('div', { className: 'text-right' },
-        e('div', { className: 'font-bold' }, f.n),
-        e('div', { className: 'text-[10px] opacity-70' }, 'לחץ לצפייה בקבצים')
+  return Layout({
+    children: e('div', null,
+      view !== 'home' && e('button', { onClick: () => setView('home'), className: 'mb-4 text-green-800 flex items-center' }, '➡️ חזרה'),
+      view === 'home' && (user.role === 'admin' ? e('div', null, 'דשבורד מנהל - סיכום שכר וניהול מוסדות') : InstructorHome()),
+      view === 'report' && ReportForm(),
+      view === 'salary' && e('div', { className: 'bg-green-700 text-white p-6 rounded-2xl text-center' },
+        e('h2', null, 'סה"כ לתשלום'),
+        e('div', { className: 'text-4xl font-bold' }, `₪${calculateInstructorSalary(user.name)}`)
       ),
-      e('span', { className: 'text-2xl opacity-40' }, f.i)
-    ))
-  );
-
-  return e('div', { className: 'min-h-screen bg-[#f8fafc] font-sans', dir: 'rtl' },
-    // Header
-    e('header', { className: 'p-4 bg-white flex justify-between items-center shadow-sm sticky top-0 z-10' },
-      e('button', { onClick: () => setUser(null), className: 'text-xs text-red-500 font-bold' }, 'התנתק'),
-      e('div', { className: 'text-lg font-bold text-[#15803d]' }, 'ישראל חיות וטבע'),
-      e('div', { className: 'w-8 h-8 bg-green-100 rounded-full flex items-center justify-center text-sm' }, '👤')
-    ),
-
-    // Main Content View
-    activeTab === 'home' && HomeView(),
-    activeTab === 'report' && e('div', { className: 'p-4 pb-32 max-w-md mx-auto' },
-      e('h2', { className: 'text-xl font-bold mb-6 text-center' }, 'דיווח פעילות'),
-      e('label', { className: 'block text-xs font-bold mb-1' }, 'בחר מוסד / אירוע'),
-      e('select', { className: 'w-full p-4 rounded-2xl border mb-4 bg-white shadow-sm', onChange: e => setReportForm({...reportForm, targetId: e.target.value}) },
-        e('option', null, '--- בחר ---'),
-        ...initialData.institutions.map(i => e('option', { value: i.id }, i.name)),
-        ...initialData.events.map(ev => e('option', { value: ev.id }, `🌟 ${ev.name}`))
-      ),
-      e('label', { className: 'block text-xs font-bold mb-2' }, 'מספר קבוצות'),
-      e('div', { className: 'grid grid-cols-5 gap-2 mb-6' },
-        [1,2,3,4,5].map(n => e('button', {
-          key: n,
-          onClick: () => setReportForm({...reportForm, numGroups: n}),
-          className: `p-4 rounded-xl font-bold ${reportForm.numGroups === n ? 'bg-green-600 text-white' : 'bg-white border'}`
-        }, n))
-      ),
-      e('div', { className: 'grid grid-cols-2 gap-4 mb-4' },
-        e('div', null,
-          e('label', { className: 'block text-[10px] font-bold mb-1' }, 'בונוס / נסיעות'),
-          e('input', { type: 'number', placeholder: '₪', className: 'w-full p-4 rounded-xl border', onChange: e => setReportForm({...reportForm, bonus: e.target.value}) })
-        ),
-        e('div', null,
-          e('label', { className: 'block text-[10px] font-bold mb-1' }, 'מזומן שנתקבל'),
-          e('input', { type: 'number', placeholder: '₪', className: 'w-full p-4 rounded-xl border', onChange: e => setReportForm({...reportForm, cashReceived: e.target.value}) })
-        )
-      ),
-      e('label', { className: 'block text-xs font-bold mb-1' }, 'בעל חיים'),
-      e('select', { className: 'w-full p-4 rounded-2xl border mb-6 bg-white shadow-sm', onChange: e => setReportForm({...reportForm, animalUsed: e.target.value}) },
-        e('option', null, '--- בחר ---'),
-        ...initialData.animals.map(a => e('option', { value: a }, a))
-      ),
-      e('button', { onClick: handleReportSubmit, className: 'w-full bg-green-700 text-white p-5 rounded-2xl font-bold shadow-lg' }, 'שלח דיווח למערכת')
-    ),
-    activeTab === 'library' && LibraryView(),
-
-    // Floating WhatsApp Button (מהסרטון)
-    e('a', { 
-      href: 'https://wa.me/972500000000', 
-      className: 'fixed bottom-24 left-6 bg-green-500 text-white w-14 h-14 rounded-full flex items-center justify-center shadow-2xl z-20 text-2xl active:scale-90 transition-transform' 
-    }, '💬'),
-
-    // Bottom Navigation (כרטיסיות מהסרטון)
-    e('nav', { className: 'fixed bottom-0 inset-x-0 bg-white border-t flex justify-around p-3 pb-6 z-30' },
-      [
-        { id: 'home', l: 'שכר', i: '💰' },
-        { id: 'report', l: 'דיווח', i: '📝' },
-        { id: 'library', l: 'ספרייה', i: '📚' },
-        { id: 'tasks', l: 'משימות', i: '📋' }
-      ].map(t => e('button', {
-        key: t.id,
-        onClick: () => setActiveTab(t.id),
-        className: `flex flex-col items-center gap-1 ${activeTab === t.id ? 'text-green-700' : 'text-gray-400'}`
-      }, 
-        e('span', { className: 'text-xl' }, t.i),
-        e('span', { className: 'text-[10px] font-bold' }, t.l)
-      ))
-    ),
-    
-    // Global Footer
-    e('footer', { className: 'hidden' }, '© כל הזכויות שמורות לישראל חיות וטבע')
-  );
+      view === 'library' && e('div', { className: 'space-y-3' },
+        ['מערכי שיעור', 'מידע על חיות', 'סרטונים', 'אישורים'].map(f => e('div', { key: f, className: 'p-4 bg-white rounded-lg shadow-sm flex justify-between' }, e('span', null, '📁'), e('span', null, f)))
+      )
+    )
+  });
 }
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
